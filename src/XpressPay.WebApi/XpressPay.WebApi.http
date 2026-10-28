@@ -1,0 +1,232 @@
+@XpressPay_HostAddress = http://localhost:5000
+
+### =========================================================
+### PART 1: AUTHENTICATION & AUTHORIZATION ENDPOINTS
+### =========================================================
+
+### 1. Login as Default Seeded Admin
+POST {{XpressPay_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "emailOrUserName": "admin@xpresspay.com",
+  "password": "Admin@123456"
+}
+
+### 2. Register a New Regular User (default role: User)
+POST {{XpressPay_HostAddress}}/api/auth/register
+Content-Type: application/json
+
+{
+  "email": "sarah@xpresspay.com",
+  "userName": "sarah",
+  "password": "User@123456",
+  "fullName": "Sarah Connor"
+}
+
+### 3. Login as New User
+POST {{XpressPay_HostAddress}}/api/auth/login
+Content-Type: application/json
+
+{
+  "emailOrUserName": "sarah@xpresspay.com",
+  "password": "User@123456"
+}
+
+### 4. Access Protected Profile (Requires Any Valid Token)
+GET {{XpressPay_HostAddress}}/api/protected/profile
+Authorization: Bearer {{token}}
+
+### 5. Access User-Role Protected Resource (Requires Role: User)
+GET {{XpressPay_HostAddress}}/api/protected/user-resource
+Authorization: Bearer {{token}}
+
+### 6. Access Admin Dashboard (Requires Role: Admin)
+GET {{XpressPay_HostAddress}}/api/admin/dashboard
+Authorization: Bearer {{token}}
+
+
+### =========================================================
+### PART 2: OPTIMIZED DATABASE QUERY ENDPOINTS (3,000+ DATASET)
+### =========================================================
+
+### 0. Retrieve Test Metadata (Pre-seeded Customers & Reference IDs)
+GET {{XpressPay_HostAddress}}/api/optimized-queries/test-metadata
+
+### 1. Scenario 1: Selective Projection & AsNoTracking
+GET {{XpressPay_HostAddress}}/api/optimized-queries/customer-summary/c1000000-0000-0000-0000-000000000001
+
+### 2. Scenario 2: Split Query (AsSplitQuery)
+GET {{XpressPay_HostAddress}}/api/optimized-queries/customer-details-split/c1000000-0000-0000-0000-000000000001
+
+### 3. Scenario 3: High-Performance Keyset (Seek) Pagination
+GET {{XpressPay_HostAddress}}/api/optimized-queries/transactions-keyset?pageSize=15
+
+### 4. Scenario 4: Server-Side Grouping & Aggregations
+GET {{XpressPay_HostAddress}}/api/optimized-queries/daily-aggregates
+
+### 5. Scenario 5a: SARGable Existence Check (AnyAsync -> SQL EXISTS)
+GET {{XpressPay_HostAddress}}/api/optimized-queries/check-active/c1000000-0000-0000-0000-000000000001
+
+### 6. Scenario 5b: SARGable Range Query
+GET {{XpressPay_HostAddress}}/api/optimized-queries/by-date-range
+
+### 7. Scenario 6: Direct Bulk Updates (ExecuteUpdateAsync)
+POST {{XpressPay_HostAddress}}/api/optimized-queries/expire-stale?hoursAgo=24
+
+### 8. Scenario 7: Pre-compiled Query (EF.CompileAsyncQuery)
+GET {{XpressPay_HostAddress}}/api/optimized-queries/by-reference/TXN-REF-100001
+
+
+### =========================================================
+### PART 3: RATE LIMITING DEMONSTRATION ENDPOINTS
+### =========================================================
+
+### 1. Inspect Rate Limiting Status & Policy Configurations
+GET {{XpressPay_HostAddress}}/api/rate-limiting/status
+
+### 2. IP-Limited Endpoint (Limit: 5 requests per 10s per IP)
+# Rapidly fire 6 requests to see 200 OK x 5, then HTTP 429 Too Many Requests
+GET {{XpressPay_HostAddress}}/api/rate-limiting/ip-limited
+
+### 3. API Key Limited Endpoint - Anonymous / Untrusted Tier (3 req / 10s)
+# No X-Api-Key header supplied -> falls back to 3 requests per 10s per IP
+GET {{XpressPay_HostAddress}}/api/rate-limiting/api-key-limited
+
+### 4. API Key Limited Endpoint - Standard Tier (8 req / 10s)
+GET {{XpressPay_HostAddress}}/api/rate-limiting/api-key-limited
+X-Api-Key: xpresspay-standard-live-key
+
+### 5. API Key Limited Endpoint - Premium Tier (15 req / 10s)
+GET {{XpressPay_HostAddress}}/api/rate-limiting/api-key-limited
+X-Api-Key: xpresspay-premium-live-key
+
+### 6. Sliding Window Endpoint (6 req / 10s over 3 segments)
+GET {{XpressPay_HostAddress}}/api/rate-limiting/sliding-limited
+
+### 7. Unlimited Endpoint (Bypassed via [DisableRateLimiting])
+GET {{XpressPay_HostAddress}}/api/rate-limiting/unlimited
+
+
+### =========================================================
+### PART 4: BACKGROUND JOB PROCESSING WITH HANGFIRE
+### =========================================================
+
+### 1. Synchronously Preview Aggregated Settlement Statement (No Job Enqueued)
+GET {{XpressPay_HostAddress}}/api/reports/preview
+
+### 2. Enqueue On-Demand Financial Settlement Report Job (Fire-and-Forget)
+# Returns HTTP 202 Accepted immediately (< 15ms); runs in background
+POST {{XpressPay_HostAddress}}/api/reports/generate-job
+Content-Type: application/json
+
+{
+  "recipientEmail": "admin@xpresspay.com",
+  "simulateFailure": false
+}
+
+### 3. Enqueue Job with Simulated Transient Failure (Demonstrates Automatic Retries)
+# Fails with simulated SMTP timeout on attempt 1, Hangfire automatically retries with backoff!
+# Inspect live at http://localhost:5000/hangfire under 'Retries'
+POST {{XpressPay_HostAddress}}/api/reports/generate-job
+Content-Type: application/json
+
+{
+  "recipientEmail": "finance-audit@xpresspay.com",
+  "simulateFailure": true
+}
+
+### 4. Schedule Delayed Report Job (Runs after 10-second countdown)
+# Hangfire places job in 'Scheduled' state; view countdown at http://localhost:5000/hangfire
+POST {{XpressPay_HostAddress}}/api/reports/schedule-job
+Content-Type: application/json
+
+{
+  "recipientEmail": "director@xpresspay.com",
+  "delaySeconds": 10,
+  "simulateFailure": false
+}
+
+### 5. Inspect Recurring Daily Job Status & Cron Schedule
+GET {{XpressPay_HostAddress}}/api/reports/recurring-status
+
+### 6. Manually Trigger Immediate Execution of the Recurring Job
+POST {{XpressPay_HostAddress}}/api/reports/trigger-recurring
+
+
+### =========================================================
+### PART 5: MICROSERVICES COMMUNICATION (REST IN NAIRA - NGN)
+### =========================================================
+@WalletService_HostAddress = http://localhost:5050
+
+### 1. Inspect Demo Accounts directly in Wallet Service (:5050)
+GET {{WalletService_HostAddress}}/api/wallets/demo-accounts
+
+### 2. Inspect Demo Accounts via Payment Service Checkout Gateway (:5000)
+GET {{XpressPay_HostAddress}}/api/checkouts/test-accounts
+
+### 3. Successful Checkout: Alice (₦500,000 NGN balance debited ₦50,000 NGN)
+POST {{XpressPay_HostAddress}}/api/checkouts
+Content-Type: application/json
+
+{
+  "customerAccountId": "a1000000-0000-0000-0000-000000000001",
+  "amount": 50000.00,
+  "currency": "NGN",
+  "itemDescription": "Noise-Cancelling Headphones"
+}
+
+### 4. Insufficient Funds (Error 422): Bob (₦15,000 NGN balance attempting ₦50,000 NGN checkout)
+POST {{XpressPay_HostAddress}}/api/checkouts
+Content-Type: application/json
+
+{
+  "customerAccountId": "b2000000-0000-0000-0000-000000000002",
+  "amount": 50000.00,
+  "currency": "NGN",
+  "itemDescription": "4K Smart TV"
+}
+
+### 5. Data Validation Error (Error 400): Negative Amount
+POST {{XpressPay_HostAddress}}/api/checkouts
+Content-Type: application/json
+
+{
+  "customerAccountId": "a1000000-0000-0000-0000-000000000001",
+  "amount": -5000.00,
+  "currency": "NGN",
+  "itemDescription": "Invalid Negative Amount Purchase"
+}
+
+### 6. Data Validation Error (Error 400): Non-NGN Currency
+POST {{XpressPay_HostAddress}}/api/checkouts
+Content-Type: application/json
+
+{
+  "customerAccountId": "a1000000-0000-0000-0000-000000000001",
+  "amount": 50.00,
+  "currency": "USD",
+  "itemDescription": "Purchase in USD (only NGN accepted)"
+}
+
+### 7. Account Not Found (Error 404): Random Non-Existent Account
+POST {{XpressPay_HostAddress}}/api/checkouts
+Content-Type: application/json
+
+{
+  "customerAccountId": "99999999-9999-9999-9999-999999999999",
+  "amount": 10000.00,
+  "currency": "NGN",
+  "itemDescription": "Ghost Account Purchase"
+}
+
+### 8. Authentication Check: Direct Wallet Service call without Service Key (Error 401)
+POST {{WalletService_HostAddress}}/api/wallets/debit
+Content-Type: application/json
+
+{
+  "accountId": "a1000000-0000-0000-0000-000000000001",
+  "amount": 5000.00,
+  "currency": "NGN",
+  "referenceNumber": "UNAUTH-TEST-001"
+}

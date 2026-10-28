@@ -1,0 +1,13 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/XpressPay.Application/XpressPay.Application.csproj" />
+    <Project Path="src/XpressPay.Domain/XpressPay.Domain.csproj" />
+    <Project Path="src/XpressPay.Infrastructure/XpressPay.Infrastructure.csproj" />
+    <Project Path="src/XpressPay.WebApi/XpressPay.WebApi.csproj" />
+    <Project Path="src/XpressPay.WalletService/XpressPay.WalletService.csproj" />
+    <Project Path="src/XpressPay.WorkerService/XpressPay.WorkerService.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/XpressPay.Tests/XpressPay.Tests.csproj" />
+  </Folder>
+</Solution>
